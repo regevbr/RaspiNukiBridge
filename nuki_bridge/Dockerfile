@@ -16,10 +16,10 @@ RUN \
         python3-dev=3.9.7-r4 \
     \
     && apk add --no-cache \
-        build-base \
+        build-base=0.5-r3 \
         python3=3.9.7-r4 \
         libffi-dev=3.4.2-r1 \
-        bluez
+        bluez=5.64-r0
 
 COPY requirements.txt /opt/
 
