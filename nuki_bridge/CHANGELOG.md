@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.0.9] - 2022-06-27
+
+### Fixed
+
+- fix undesired disconnects
+
 ## [0.0.8] - 2022-06-27
 
 ### Fixed

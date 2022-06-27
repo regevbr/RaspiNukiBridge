@@ -220,6 +220,7 @@ class NukiManager:
             if not nuki.device_type:
                 try:
                     await nuki.connect()  # this will force the identification of the device type
+                    await nuki.disconnect()
                 except Exception as e:
                     logger.info('Error while detecting non-nuki')
                     logger.exception(e)
@@ -575,6 +576,7 @@ class Nuki:
                     characteristic = self._BLE_CHAR
                 logger.info(f'Sending data to {characteristic}: {data}')
                 await self._client.write_gatt_char(characteristic, data)
+                await self.disconnect()
             except Exception as exc:
                 logger.info(f'Error while sending data on attempt {i}')
                 logger.exception(exc)
@@ -611,22 +613,11 @@ class Nuki:
         await self._safe_start_notify(self._BLE_PAIRING_CHAR, self._notification_handler)
         await self._safe_start_notify(self._BLE_CHAR, self._notification_handler)
         logger.info("Connected")
-        self._command_timeout_task = asyncio.create_task(self._start_cmd_timeout())
-
-    async def _start_cmd_timeout(self):
-        await asyncio.sleep(self.command_timeout)
-        logger.info("Connection timeout. Try pairing again.")
-        # TODO: Clear lock from nuki.yaml
-        # TODO: Ask user to pair again
-        await self.disconnect()
 
     async def disconnect(self, and_scan=True):
         logger.info(f"Nuki disconnecting... and_scan={and_scan}")
         await self._client.disconnect()
         logger.info("Nuki disconnected")
-        if self._command_timeout_task:
-            self._command_timeout_task.cancel()
-            self._command_timeout_task = None
         if and_scan:
             await self.manager.start_scanning()
 
