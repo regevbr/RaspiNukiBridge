@@ -52,7 +52,7 @@ def init_config(config_file):
         'bridge_public_key': bridge_public_key.hex(),
         'bridge_private_key': bridge_private_key.hex(),
         'connection_timeout': 1,
-        'command_timeout': 30,
+        'command_timeout': 2,
         'retry': 15
     }
 
