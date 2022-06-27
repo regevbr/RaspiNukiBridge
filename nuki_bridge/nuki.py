@@ -253,8 +253,8 @@ class Nuki:
         self._pairing_callback = None
         self._command_timeout_task = None
         self._reset_opener_state_task = None
-        self.retry = 3
-        self.connection_timeout = 10
+        self.retry = 6
+        self.connection_timeout = 5
         self.command_timeout = 30
 
         self._BLE_CHAR = None
