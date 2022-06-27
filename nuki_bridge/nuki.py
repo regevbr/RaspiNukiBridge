@@ -154,8 +154,8 @@ class NukiManager:
         if self.newstate_callback:
             await self.newstate_callback(nuki)
 
-    def get_client(self, address, timeout=None):
-        return BleakClient(address, adapter=self._adapter, timeout=timeout)
+    def get_client(self, address_or_device, timeout=None):
+        return BleakClient(address_or_device, adapter=self._adapter, timeout=timeout)
 
     def __getitem__(self, index):
         return list(self._devices.values())[index]
@@ -253,9 +253,9 @@ class Nuki:
         self._pairing_callback = None
         self._command_timeout_task = None
         self._reset_opener_state_task = None
-        self.retry = 15
+        self.retry = 16
         self.connection_timeout = 1
-        self.command_timeout = 2
+        self.command_timeout = 5
 
         self._BLE_CHAR = None
         self._BLE_PAIRING_CHAR = None
@@ -459,7 +459,7 @@ class Nuki:
             await self.manager.nuki_newstate(self)
 
     def set_ble_device(self, ble_device):
-        self._client = BleakClient(ble_device)
+        self._client = self.manager.get_client(ble_device, timeout=self.connection_timeout)
         return self._client
 
     async def _notification_handler(self, sender, data):
@@ -572,7 +572,8 @@ class Nuki:
             logger.info(f'Trying to send data. Attempt {i}')
             try:
                 if not self._client or not self._client.is_connected:
-                    await asyncio.wait_for(self.connect(), timeout=self.command_timeout)
+                    # await asyncio.wait_for(self.connect(), timeout=self.command_timeout)
+                    await self.connect()
                 if characteristic is None:
                     characteristic = self._BLE_CHAR
                 logger.info(f'Sending data to {characteristic}: {data}')
