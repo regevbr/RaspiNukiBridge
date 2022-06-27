@@ -462,7 +462,8 @@ class Nuki:
 
     async def _notification_handler(self, sender, data):
         logger.debug(f"Notification handler: {sender}, data: {data}")
-        if sender == self._client.services[self._BLE_PAIRING_CHAR].handle:
+        if self._client.services[self._BLE_PAIRING_CHAR] and \
+                sender == self._client.services[self._BLE_PAIRING_CHAR].handle:
             # The pairing handler is not encrypted
             command, data = await self._parse_command(bytes(data))
         else:
