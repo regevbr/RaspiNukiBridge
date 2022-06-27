@@ -1,9 +1,6 @@
-ARG BUILD_FROM=ghcr.io/hassio-addons/base-python/amd64:8.1.1
+ARG BUILD_FROM=ghcr.io/hassio-addons/base/amd64:11.1.2
 # hadolint ignore=DL3006
 FROM ${BUILD_FROM}
-
-# Copy requirements.txt
-COPY requirements.txt *.py /opt/
 
 # Set workdir
 WORKDIR /opt
@@ -22,12 +19,38 @@ RUN \
         build-base \
         python3=3.9.7-r4 \
         libffi-dev=3.4.2-r1 \
-        bluez \
-    \
-    && pip install --no-cache-dir -r /opt/requirements.txt
+        bluez
 
+COPY requirements.txt /opt/
+
+# Install requirements for add-on
+RUN pip install --no-cache-dir -r /opt/requirements.txt
+
+COPY *.py /opt/
 
 CMD [ "python3", "." ]
+
+# Build arguments
+ARG BUILD_ARCH
+ARG BUILD_DATE
+ARG BUILD_REF
+ARG BUILD_VERSION
+
+# Labels
+LABEL \
+    io.hass.name="Nuki Bridge" \
+    io.hass.description="Virtual Nuki Bridge to use instead of the physical device" \
+    io.hass.arch="${BUILD_ARCH}" \
+    io.hass.type="addon" \
+    io.hass.version=${BUILD_VERSION} \
+    org.opencontainers.image.title="Nuki Bridge" \
+    org.opencontainers.image.description="Virtual Nuki Bridge to use instead of the physical device" \
+    org.opencontainers.image.licenses="Apache-2.0" \
+    org.opencontainers.image.url="https://github.com/regevbr/RaspiNukiBridge" \
+    org.opencontainers.image.source="https://github.com/regevbr/RaspiNukiBridge" \
+    org.opencontainers.image.created=${BUILD_DATE} \
+    org.opencontainers.image.revision=${BUILD_REF} \
+    org.opencontainers.image.version=${BUILD_VERSION}
 
 # For debugging
 #CMD ["sleep", "infinity"]
