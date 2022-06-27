@@ -46,7 +46,7 @@ LABEL \
     org.opencontainers.image.title="Nuki Bridge" \
     org.opencontainers.image.description="Virtual Nuki Bridge to use instead of the physical device" \
     org.opencontainers.image.licenses="Apache-2.0" \
-    org.opencontainers.image.url="https://github.com/regevbr/RaspiNukiBridge" \
+    org.opencontainers.image.url="https://github.com/regevbr/nuki_bridge" \
     org.opencontainers.image.source="https://github.com/regevbr/RaspiNukiBridge" \
     org.opencontainers.image.created=${BUILD_DATE} \
     org.opencontainers.image.revision=${BUILD_REF} \

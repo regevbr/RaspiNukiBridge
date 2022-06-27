@@ -598,7 +598,7 @@ class Nuki:
     async def connect(self):
         if not self._client:
             self._client = self.manager.get_client(self.address, timeout=self.connection_timeout)
-        await self.manager.stop_scanning()
+        self.manager.stop_scanning()
         logger.info("Nuki connecting")
         await self._client.connect()
         logger.debug(f"Services {[str(s) for s in self._client.services]}")
