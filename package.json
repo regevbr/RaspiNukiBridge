@@ -1,0 +1,23 @@
+{
+  "name": "raspinukibridge",
+  "version": "1.0.0",
+  "description": "Use this instead of the [Nuki Bridge](https://nuki.io/en/bridge/) device.",
+  "main": "index.js",
+  "scripts": {
+    "lint:md": "mdl .",
+    "prettier": "./node_modules/.bin/prettier --write '**/*.{json,js,md,yaml}'"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/regevbr/RaspiNukiBridge.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/regevbr/RaspiNukiBridge/issues"
+  },
+  "homepage": "https://github.com/regevbr/RaspiNukiBridge#readme",
+  "dependencies": {
+    "prettier": "^2.5.1"
+  }
+}
