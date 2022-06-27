@@ -577,9 +577,10 @@ class Nuki:
             except Exception as exc:
                 logger.info(f'Error while sending data on attempt {i}')
                 logger.exception(exc)
-                await asyncio.sleep(1)
+                await asyncio.sleep(0.2)
             else:
                 logger.info(f'Data sent on attempt {i}')
+                await self.manager.start_scanning()
                 break
         else:
             await self.disconnect()
@@ -610,22 +611,24 @@ class Nuki:
         await self._safe_start_notify(self._BLE_PAIRING_CHAR, self._notification_handler)
         await self._safe_start_notify(self._BLE_CHAR, self._notification_handler)
         logger.info("Connected")
-        self._command_timeout_task = asyncio.create_task(self._start_cmd_timeout())
+        # self._command_timeout_task = asyncio.create_task(self._start_cmd_timeout())
 
-    async def _start_cmd_timeout(self):
-        await asyncio.sleep(self.command_timeout)
-        logger.info("Connection timeout. Try pairing again.")
-        # TODO: Clear lock from nuki.yaml
-        # TODO: Ask user to pair again
-        await self.disconnect()
+    # async def _start_cmd_timeout(self):
+    #     await asyncio.sleep(self.command_timeout)
+    #     logger.info("Connection timeout")
+    #     # TODO: Clear lock from nuki.yaml
+    #     # TODO: Ask user to pair again
+    #     # await self.disconnect()
+    #     logger.info(f"Nuki start scanning")
+    #     await self.manager.start_scanning()
 
     async def disconnect(self, and_scan=True):
         logger.info(f"Nuki disconnecting... and_scan={and_scan}")
         await self._client.disconnect()
         logger.info("Nuki disconnected")
-        if self._command_timeout_task:
-            self._command_timeout_task.cancel()
-            self._command_timeout_task = None
+        # if self._command_timeout_task:
+        #     self._command_timeout_task.cancel()
+        #     self._command_timeout_task = None
         if and_scan:
             await self.manager.start_scanning()
 
