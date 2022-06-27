@@ -1,7 +1,7 @@
 ---
 name: Nuki Bridge
 description: Virtual Nuki Bridge to use instead of the physical device
-version: 0.0.3
+version: 0.0.4
 slug: nuki_bridge
 url: https://github.com/regevbr/RaspiNukiBridge
 arch:
@@ -15,4 +15,4 @@ ports:
 ports_description:
   8080/tcp: Bridge api port
 host_dbus: true
-image: ghcr.io/regevbr/RaspiNukiBridge/{arch}
+image: ghcr.io/regevbr/nuki_bridge/{arch}
