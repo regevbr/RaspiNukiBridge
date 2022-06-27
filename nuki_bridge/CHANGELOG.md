@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.0.10] - 2022-06-27
+
+### Fixed
+
+- fix hanging stop scan command
+
 ## [0.0.9] - 2022-06-27
 
 ### Fixed
@@ -42,6 +48,7 @@
 
 - alpha version
 
+[0.0.10]: https://github.com/regevbr/RaspiNukiBridge/compare/v0.0.10...v0.0.9
 [0.0.9]: https://github.com/regevbr/RaspiNukiBridge/compare/v0.0.9...v0.0.8
 [0.0.8]: https://github.com/regevbr/RaspiNukiBridge/compare/v0.0.8...v0.0.7
 [0.0.7]: https://github.com/regevbr/RaspiNukiBridge/compare/v0.0.7...v0.0.6

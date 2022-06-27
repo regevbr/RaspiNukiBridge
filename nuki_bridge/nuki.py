@@ -192,7 +192,10 @@ class NukiManager:
     async def stop_scanning(self):
         logger.info("Stop scanning")
         try:
-            await self._scanner.stop()
+            await asyncio.wait_for(self._scanner.stop(), timeout=self.command_timeout)
+        except asyncio.TimeoutError as e:
+            logger.info(f'Timeout while stop scanning')
+            logger.exception(e)
         except BleakDBusError as e:
             logger.info('Error while stop scanning')
             logger.exception(e)
@@ -570,8 +573,7 @@ class Nuki:
         for i in range(1, self.retry + 1):
             logger.info(f'Trying to send data. Attempt {i}')
             try:
-                if not self._client or not self._client.is_connected:
-                    await self.connect()
+                await self.connect()
                 if characteristic is None:
                     characteristic = self._BLE_CHAR
                 logger.info(f'Sending data to {characteristic}: {data}')
@@ -599,6 +601,9 @@ class Nuki:
     async def connect(self):
         if not self._client:
             self._client = self.manager.get_client(self.address, timeout=self.connection_timeout)
+        if self._client.is_connected:
+            logger.info("Connected")
+            return
         await self.manager.stop_scanning()
         logger.info("Nuki connecting")
         await self._client.connect()
