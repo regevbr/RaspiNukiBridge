@@ -253,8 +253,8 @@ class Nuki:
         self._pairing_callback = None
         self._command_timeout_task = None
         self._reset_opener_state_task = None
-        self.retry = 8
-        self.connection_timeout = 3
+        self.retry = 15
+        self.connection_timeout = 1
         self.command_timeout = 30
 
         self._BLE_CHAR = None
@@ -578,7 +578,7 @@ class Nuki:
             except Exception as exc:
                 logger.info(f'Error while sending data on attempt {i}')
                 logger.exception(exc)
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(0.2)
             else:
                 logger.info(f'Data sent on attempt {i}')
                 await self.manager.start_scanning()

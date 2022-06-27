@@ -51,9 +51,9 @@ def init_config(config_file):
     smartlock = {
         'bridge_public_key': bridge_public_key.hex(),
         'bridge_private_key': bridge_private_key.hex(),
-        'connection_timeout': 30,
+        'connection_timeout': 1,
         'command_timeout': 30,
-        'retry': 5
+        'retry': 15
     }
 
     # Device MAC Address
