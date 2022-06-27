@@ -189,10 +189,10 @@ class NukiManager:
                 logger.info(f"Scanning failed on attempt {i}. Retrying in {sleep_seconds} seconds")
                 time.sleep(sleep_seconds)
 
-    async def stop_scanning(self):
+    async def stop_scanning(self, timeout=10.0):
         logger.info("Stop scanning")
         try:
-            await asyncio.wait_for(self._scanner.stop(), timeout=self.command_timeout)
+            await asyncio.wait_for(self._scanner.stop(), timeout=timeout)
         except asyncio.TimeoutError as e:
             logger.info(f'Timeout while stop scanning')
             logger.exception(e)
@@ -604,7 +604,7 @@ class Nuki:
         if self._client.is_connected:
             logger.info("Connected")
             return
-        await self.manager.stop_scanning()
+        await self.manager.stop_scanning(timeout=self.command_timeout)
         logger.info("Nuki connecting")
         await self._client.connect()
         logger.debug(f"Services {[str(s) for s in self._client.services]}")
