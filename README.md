@@ -2,6 +2,9 @@
 
 Use this instead of the [Nuki Bridge](https://nuki.io/en/bridge/) device.
 
+> Important - if you are experiencing delays using RPI, it is advised to use a bluetooth dongle instead of the builtin bluetooth hardware. 
+> [TP-LINK UB400](https://www.tp-link.com/us/home-networking/usb-adapter/ub400/) is verified to be working.
+
 ## Background
 
 - This is heavily inspired by the work of [Jandebeule](https://github.com/jandebeule/nukiPyBridge).
