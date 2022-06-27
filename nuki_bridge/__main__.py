@@ -22,9 +22,9 @@ def _add_devices_to_manager(data, nuki_manager):
         bridge_public_key = bytes.fromhex(ls["bridge_public_key"])
         bridge_private_key = bytes.fromhex(ls["bridge_private_key"])
         n = Nuki(address, auth_id, nuki_public_key, bridge_public_key, bridge_private_key)
-        n.retry = ls.get("retry", 16)
-        n.connection_timeout = ls.get("connection_timeout", 1)
-        n.command_timeout = ls.get("command_timeout", 5)
+        n.retry = ls.get("retry", 5)
+        n.connection_timeout = ls.get("connection_timeout", 10)
+        n.command_timeout = ls.get("command_timeout", 30)
         nuki_manager.add_nuki(n)
 
 

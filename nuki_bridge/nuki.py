@@ -253,9 +253,9 @@ class Nuki:
         self._pairing_callback = None
         self._command_timeout_task = None
         self._reset_opener_state_task = None
-        self.retry = 16
-        self.connection_timeout = 1
-        self.command_timeout = 5
+        self.retry = 5
+        self.connection_timeout = 10
+        self.command_timeout = 30
 
         self._BLE_CHAR = None
         self._BLE_PAIRING_CHAR = None
@@ -264,8 +264,6 @@ class Nuki:
             self._create_shared_key()
 
         self._last_ibeacon = None
-
-        self._background_tasks = set()
 
     @property
     def just_got_beacon(self):
@@ -572,23 +570,17 @@ class Nuki:
             logger.info(f'Trying to send data. Attempt {i}')
             try:
                 if not self._client or not self._client.is_connected:
-                    # await asyncio.wait_for(self.connect(), timeout=self.command_timeout)
                     await self.connect()
                 if characteristic is None:
                     characteristic = self._BLE_CHAR
                 logger.info(f'Sending data to {characteristic}: {data}')
                 await self._client.write_gatt_char(characteristic, data)
-            except asyncio.TimeoutError as exc:
-                logger.info(f'Timeout while sending data on attempt {i}')
-                logger.exception(exc)
-                await asyncio.sleep(0.2)
             except Exception as exc:
                 logger.info(f'Error while sending data on attempt {i}')
                 logger.exception(exc)
                 await asyncio.sleep(0.2)
             else:
                 logger.info(f'Data sent on attempt {i}')
-                await self.manager.start_scanning()
                 break
         else:
             await self.disconnect()
@@ -605,12 +597,9 @@ class Nuki:
     async def connect(self):
         if not self._client:
             self._client = self.manager.get_client(self.address, timeout=self.connection_timeout)
-        stop_scan_task = asyncio.create_task(self.manager.stop_scanning())
-        self._background_tasks.add(stop_scan_task)
-        stop_scan_task.add_done_callback(self._background_tasks.discard)
+        await self.manager.stop_scanning()
         logger.info("Nuki connecting")
         await self._client.connect()
-        logger.info("Connected")
         logger.debug(f"Services {[str(s) for s in self._client.services]}")
         logger.debug(f"Characteristics {[str(v) for v in self._client.services.characteristics.values()]}")
         if not self.device_type:
@@ -621,25 +610,23 @@ class Nuki:
                 self.device_type = DeviceType.SMARTLOCK_1_2
         await self._safe_start_notify(self._BLE_PAIRING_CHAR, self._notification_handler)
         await self._safe_start_notify(self._BLE_CHAR, self._notification_handler)
-        logger.info("Connected and ready")
-        # self._command_timeout_task = asyncio.create_task(self._start_cmd_timeout())
+        logger.info("Connected")
+        self._command_timeout_task = asyncio.create_task(self._start_cmd_timeout())
 
-    # async def _start_cmd_timeout(self):
-    #     await asyncio.sleep(self.command_timeout)
-    #     logger.info("Connection timeout")
-    #     # TODO: Clear lock from nuki.yaml
-    #     # TODO: Ask user to pair again
-    #     # await self.disconnect()
-    #     logger.info(f"Nuki start scanning")
-    #     await self.manager.start_scanning()
+    async def _start_cmd_timeout(self):
+        await asyncio.sleep(self.command_timeout)
+        logger.info("Connection timeout. Try pairing again.")
+        # TODO: Clear lock from nuki.yaml
+        # TODO: Ask user to pair again
+        await self.disconnect()
 
     async def disconnect(self, and_scan=True):
         logger.info(f"Nuki disconnecting... and_scan={and_scan}")
         await self._client.disconnect()
         logger.info("Nuki disconnected")
-        # if self._command_timeout_task:
-        #     self._command_timeout_task.cancel()
-        #     self._command_timeout_task = None
+        if self._command_timeout_task:
+            self._command_timeout_task.cancel()
+            self._command_timeout_task = None
         if and_scan:
             await self.manager.start_scanning()
 

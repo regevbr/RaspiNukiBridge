@@ -27,6 +27,7 @@ def init_config(config_file):
             'server': {
                 'host': '0.0.0.0',
                 'port': '8080',
+                'adapter': 'hci0',
                 'name': 'RaspiNukiBridge',
                 'app_id': app_id,
                 'token': token
@@ -51,9 +52,9 @@ def init_config(config_file):
     smartlock = {
         'bridge_public_key': bridge_public_key.hex(),
         'bridge_private_key': bridge_private_key.hex(),
-        'connection_timeout': 1,
-        'command_timeout': 5,
-        'retry': 16
+        'connection_timeout': 10,
+        'command_timeout': 30,
+        'retry': 5
     }
 
     # Device MAC Address
