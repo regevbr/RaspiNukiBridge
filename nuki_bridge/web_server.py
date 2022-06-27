@@ -1,31 +1,12 @@
-import asyncio
-import json
-import logging
-import random
-import yaml
 import datetime
 import hashlib
-import argparse
+import json
 import uuid
-import sys
 
-
-from nacl.public import PrivateKey
 from aiohttp import web, ClientSession
 
-from nuki import Nuki, NukiManager, BridgeType, DeviceType
-
-LOG_FORMAT = "%(asctime)s.%(msecs)03d|%(levelname).1s|%(filename)s:%(lineno)d|%(message)s"
-
-logger = logging.getLogger("raspinukibridge")
-handler = logging.StreamHandler(sys.stdout)
-handler.setFormatter(logging.Formatter(fmt=LOG_FORMAT, datefmt="%Y-%m-%d %H:%M:%S"))
-logger.addHandler(handler)
-
-logging.getLogger("aiohttp").addHandler(handler)
-logging.getLogger("aiohttp").setLevel(logging.ERROR)
-logging.getLogger("bleak").addHandler(handler)
-logging.getLogger("bleak").setLevel(logging.ERROR)
+from utils import logger
+from nuki import DeviceType, BridgeType
 
 
 class WebServer:
@@ -127,6 +108,7 @@ class WebServer:
                  "deviceType": nuki.device_type.value,  # How to get this from bt api?
                  "name": nuki.config["name"],
                  "lastKnownState": self._get_nuki_last_state(nuki)} for nuki in self.nuki_manager if nuki.config]
+        logger.info(f'Listed {len(resp)} devices')
         return web.Response(text=json.dumps(resp))
 
     async def nuki_info(self, request):
@@ -148,14 +130,17 @@ class WebServer:
         return web.Response(text=json.dumps(resp))
 
     def _check_token(self, request):
+        token_valid = False
         if "hash" in request.query:
             rnr = request.query["rnr"]
             ts = request.query["ts"]
             hash_256 = hashlib.sha256(f"{ts},{rnr},{self._token}".encode("utf-8")).hexdigest()
-            return hash_256 == request.query["hash"]
+            token_valid = hash_256 == request.query["hash"]
         elif "token" in request.query:
-            return self._token == request.query["token"]
-        return False
+            token_valid = self._token == request.query["token"]
+        if not token_valid:
+            logger.error('Invalid token. Please change token.')
+        return token_valid
 
     async def nuki_lockaction(self, request):
         if not self._check_token(request):
@@ -187,97 +172,3 @@ class WebServer:
         await n.unlock()
         res = json.dumps({"success": True, "batteryCritical": n.is_battery_critical})
         return web.Response(text=res)
-
-
-def _add_devices_to_manager(data, nuki_manager):
-    for ls in data["smartlock"]:
-        address = ls["address"]
-        auth_id = bytes.fromhex(ls["auth_id"])
-        nuki_public_key = bytes.fromhex(ls["nuki_public_key"])
-        bridge_public_key = bytes.fromhex(ls["bridge_public_key"])
-        bridge_private_key = bytes.fromhex(ls["bridge_private_key"])
-        n = Nuki(address, auth_id, nuki_public_key, bridge_public_key, bridge_private_key)
-        n.retry = ls.get("retry", 3)
-        n.connection_timeout = ls.get("connection_timeout", 10)
-        n.command_timeout = ls.get("command_timeout", 30)
-        nuki_manager.add_nuki(n)
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--config", metavar=('CONFIG_FILE',), help="Specify the yaml file to use")
-    parser.add_argument("--pair", metavar=('MAC_ADDRESS',), help="Pair to a nuki smartlock")
-    parser.add_argument("--generate-config", action='store_true', help="Generate a new configuration file")
-    parser.add_argument("--unlock", action='store_true', help="Unlock")
-    parser.add_argument("--lock", action='store_true', help="Lock")
-    parser.add_argument("--verbose", nargs='?', const=1, type=int, default=0, help="More logs")
-    args = parser.parse_args()
-
-    if not args.verbose:
-        logger.setLevel(level=logging.INFO)
-        logging.getLogger("aiohttp").setLevel(level=logging.ERROR)
-        logging.getLogger("bleak").setLevel(level=logging.ERROR)
-    elif args.verbose == 1:
-        logger.setLevel(level=logging.DEBUG)
-        logging.getLogger("aiohttp").setLevel(level=logging.INFO)
-        logging.getLogger("bleak").setLevel(level=logging.INFO)
-    elif args.verbose == 2:
-        logger.setLevel(level=logging.DEBUG)
-        logging.getLogger("aiohttp").setLevel(level=logging.DEBUG)
-        logging.getLogger("bleak").setLevel(level=logging.DEBUG)
-
-    if args.generate_config:
-        app_id = random.getrandbits(32)
-        token = random.getrandbits(256).to_bytes(32, "little").hex()
-        print(f"server:\n"
-              f"  host: 0.0.0.0\n"
-              f"  port: 8080\n"
-              f"  name: RaspiNukiBridge\n"
-              f"  app_id: {app_id}\n"
-              f"  token: {token}\n")
-        exit(0)
-
-    config_file = args.config or "nuki.yaml"
-    with open(config_file) as f:
-        data = yaml.load(f, Loader=yaml.FullLoader)
-
-    name = data["server"]["name"]
-    app_id = data["server"]["app_id"]
-    bt_adapter = data["server"].get("adapter", "hci0")
-
-    nuki_manager = NukiManager(name, app_id, bt_adapter)
-
-    if args.pair:
-        address = args.pair
-        logger.info(f"Generatig keys for Nuki {address}")
-        keypair = PrivateKey.generate()
-        bridge_public_key = keypair.public_key.__bytes__()
-        bridge_private_key = keypair.__bytes__()
-        logger.info(f"bridge_public_key: {bridge_public_key.hex()}")
-        logger.info(f"bridge_private_key: {bridge_private_key.hex()}")
-        nuki = Nuki(address, None, None, bridge_public_key, bridge_private_key)
-        nuki_manager.add_nuki(nuki)
-
-        loop = asyncio.get_event_loop()
-
-        def pairing_completed(paired_nuki):
-            logger.info(f"Pairing completed, nuki_public_key: {paired_nuki.nuki_public_key.hex()}")
-            logger.info(f"Pairing completed, auth_id: {paired_nuki.auth_id.hex()}")
-            loop.stop()
-        loop.create_task(nuki.pair(pairing_completed))
-        loop.run_forever()
-    else:
-        _add_devices_to_manager(data, nuki_manager)
-
-        if args.unlock:
-            device = nuki_manager.device_list[0]
-            asyncio.run(device.unlock())
-        elif args.lock:
-            device = nuki_manager.device_list[0]
-            asyncio.run(device.lock())
-        else:
-            host = data["server"]["host"]
-            port = data["server"]["port"]
-            token = data["server"]["token"]
-            web_server = WebServer(host, port, token, nuki_manager)
-            web_server.start()

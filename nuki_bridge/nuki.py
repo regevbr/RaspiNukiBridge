@@ -5,10 +5,12 @@ import logging
 import struct
 import hmac
 import enum
+import time
 
 import crc16
 import nacl.utils
 import nacl.secret
+from bleak.exc import BleakDBusError
 from nacl.bindings.crypto_box import crypto_box_beforenm
 from bleak import BleakScanner, BleakClient
 
@@ -118,6 +120,10 @@ class NukiClientType(enum.Enum):
     KEYPAD = 0x03
 
 
+class PairingError(enum.Enum):
+    NOT_PAIRING = 0x10
+
+
 logger = logging.getLogger("raspinukibridge")
 
 
@@ -166,31 +172,57 @@ class NukiManager:
         return list(self._devices.values())
 
     async def start_scanning(self):
-        logger.info("Start scanning")
-        await self._scanner.start()
+        ATTEMPTS = 8
+        logger.info(f"Starting a scan")
+        for i in range(1, ATTEMPTS + 1):
+            try:
+                logger.info(f"Scanning attempt {i}")
+                await self._scanner.start()
+                logger.info(f"Scanning succeeded on attempt {i}")
+                break
+            except BleakDBusError as e:
+                logger.info(f'Error while start scanning attempt {i}')
+                if i >= ATTEMPTS - 1:
+                    raise e
+                logger.exception(e)
+                sleep_seconds = 2 ** i
+                logger.info(f"Scanning failed on attempt {i}. Retrying in {sleep_seconds} seconds")
+                time.sleep(sleep_seconds)
 
     async def stop_scanning(self):
         logger.info("Stop scanning")
         try:
             await self._scanner.stop()
-        except:
-            pass
+        except BleakDBusError as e:
+            logger.info('Error while stop scanning')
+            logger.exception(e)
+        except AttributeError as e:
+            logger.info('Error while stop scanning. Scan was probably not started.')
+            logger.exception(e)
 
     async def _detected_ibeacon(self, device, advertisement_data):
         if device.address in self._devices:
-            manufacturer_data = advertisement_data.manufacturer_data[76]
+            manufacturer_data = advertisement_data.manufacturer_data.get(76, None)
+            if manufacturer_data is None:
+                logger.info(f"No manufacturer_data (76) in advertisement_data: {advertisement_data}")
+                return
             if manufacturer_data[0] != 0x02:
                 # Ignore HomeKit advertisement
                 return
             logger.info(f"Nuki: {device.address}, RSSI: {device.rssi} {advertisement_data}")
             tx_p = manufacturer_data[-1]
             nuki = self._devices[device.address]
+            if nuki.just_got_beacon:
+                logger.info(f'Ignoring duplicate beacon from Nuki {device.address}')
+                return
             nuki.set_ble_device(device)
             nuki.rssi = device.rssi
             if not nuki.device_type:
                 try:
                     await nuki.connect()  # this will force the identification of the device type
-                except:
+                except Exception as e:
+                    logger.info('Error while detecting non-nuki')
+                    logger.exception(e)
                     await self.start_scanning()
                     return
             if not nuki.last_state or tx_p & 0x1:
@@ -231,10 +263,22 @@ class Nuki:
         if nuki_public_key and bridge_private_key:
             self._create_shared_key()
 
+        self._last_ibeacon = None
+
+    @property
+    def just_got_beacon(self):
+        if self._last_ibeacon is None:
+            self._last_ibeacon = time.time()
+            return False
+        seen_recently = time.time() - self._last_ibeacon <= 1
+        if not seen_recently:
+            self._last_ibeacon = time.time()
+        return seen_recently
+
     @property
     def device_type(self):
         return self._device_type
-    
+
     @device_type.setter
     def device_type(self, device_type: DeviceType):
         if device_type == DeviceType.OPENER:
@@ -289,7 +333,7 @@ class Nuki:
     async def _parse_command(self, data):
         command, = struct.unpack("<H", data[:2])
         command = NukiCommand(command)
-        #crc = data[-2:]
+        # crc = data[-2:]
         data = data[2:-2]
         logger.debug(f"Parsing command: {command}, data: {data}")
 
@@ -426,7 +470,17 @@ class Nuki:
             command, data = await self._parse_command(uncrypted)
 
         if command == NukiCommand.ERROR_REPORT:
-            logger.error(f"Error {data}")
+            if data == PairingError.NOT_PAIRING.value:
+                logger.error(f"********************************************************************")
+                logger.error(f"*                                                                  *")
+                logger.error(f"*                            UNPAIRED!                             *")
+                logger.error(f"*    Put Nuki in pairing mode by pressing the button 6 seconds     *")
+                logger.error(f"*                         Then try again                           *")
+                logger.error(f"*                                                                  *")
+                logger.error(f"********************************************************************")
+                exit(0)
+            else:
+                logger.error(f"Error {data}")
             await self.disconnect()
 
         if command == NukiCommand.KEYTURNER_STATES:
@@ -468,7 +522,7 @@ class Nuki:
             await self._send_data(self._BLE_PAIRING_CHAR, cmd)
 
         elif command == NukiCommand.STATUS:
-            logger.error(f"Last action: {data}")
+            logger.info(f"Last action: {data}")
             if self._challenge_command == NukiCommand.AUTH_ID_CONFIRM:
                 if self._pairing_callback:
                     self._pairing_callback(self)
@@ -511,18 +565,21 @@ class Nuki:
 
     async def _send_data(self, characteristic, data):
         # Sometimes the connection to the smartlock fails, retry 3 times
-        for _ in range(self.retry):
+        for i in range(1, self.retry + 1):
+            logger.info(f'Trying to send data. Attempt {i}')
             try:
                 if not self._client or not self._client.is_connected:
                     await self.connect()
                 if characteristic is None:
                     characteristic = self._BLE_CHAR
-                logger.debug(f"Sending data to {characteristic}: {data}")
+                logger.info(f'Sending data to {characteristic}: {data}')
                 await self._client.write_gatt_char(characteristic, data)
             except Exception as exc:
-                logger.exception(f"Error: {type(exc)} {exc}")
+                logger.info(f'Error while sending data on attempt {i}')
+                logger.exception(exc)
                 await asyncio.sleep(1)
             else:
+                logger.info(f'Data sent on attempt {i}')
                 break
         else:
             await self.disconnect()
@@ -557,19 +614,23 @@ class Nuki:
 
     async def _start_cmd_timeout(self):
         await asyncio.sleep(self.command_timeout)
-        logger.info("Connection timeout")
+        logger.info("Connection timeout. Try pairing again.")
+        # TODO: Clear lock from nuki.yaml
+        # TODO: Ask user to pair again
         await self.disconnect()
 
-    async def disconnect(self):
-        logger.info("Nuki disconnecting")
+    async def disconnect(self, and_scan=True):
+        logger.info(f"Nuki disconnecting... and_scan={and_scan}")
         await self._client.disconnect()
+        logger.info("Nuki disconnected")
         if self._command_timeout_task:
             self._command_timeout_task.cancel()
             self._command_timeout_task = None
-        await self.manager.start_scanning()
+        if and_scan:
+            await self.manager.start_scanning()
 
     async def update_state(self):
-        logger.info("Updating nuki state")
+        logger.info("Querying Nuki state")
         self._challenge_command = NukiCommand.KEYTURNER_STATES
         payload = NukiCommand.KEYTURNER_STATES.value.to_bytes(2, "little")
         cmd = self._encrypt_command(NukiCommand.REQUEST_DATA.value, payload)
@@ -581,6 +642,7 @@ class Nuki:
         payload = NukiCommand.CHALLENGE.value.to_bytes(2, "little")
         cmd = self._encrypt_command(NukiCommand.REQUEST_DATA.value, payload)
         await self._send_data(self._BLE_CHAR, cmd)
+        self.last_state['lock_state'] = LockState.LOCKING
 
     async def unlock(self):
         logger.info("Unlocking")
@@ -588,12 +650,14 @@ class Nuki:
         payload = NukiCommand.CHALLENGE.value.to_bytes(2, "little")
         cmd = self._encrypt_command(NukiCommand.REQUEST_DATA.value, payload)
         await self._send_data(self._BLE_CHAR, cmd)
+        self.last_state['lock_state'] = LockState.UNLOCKING
 
     async def unlatch(self):
         self._challenge_command = NukiAction.UNLATCH
         payload = NukiCommand.CHALLENGE.value.to_bytes(2, "little")
         cmd = self._encrypt_command(NukiCommand.REQUEST_DATA.value, payload)
         await self._send_data(self._BLE_CHAR, cmd)
+        self.last_state['lock_state'] = LockState.UNLATCHING
 
     async def lock_action(self, action):
         logger.info(f"Lock action {action}")
