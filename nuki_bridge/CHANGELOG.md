@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.0.16] - 2022-06-28
+
+### Fixed
+
+- fixed no even loop exists exception
+
 ## [0.0.15] - 2022-06-28
 
 ### Added
@@ -78,6 +84,7 @@
 
 - alpha version
 
+[0.0.16]: https://github.com/regevbr/RaspiNukiBridge/compare/v0.0.15...v0.0.16
 [0.0.15]: https://github.com/regevbr/RaspiNukiBridge/compare/v0.0.14...v0.0.15
 [0.0.14]: https://github.com/regevbr/RaspiNukiBridge/compare/v0.0.13...v0.0.14
 [0.0.13]: https://github.com/regevbr/RaspiNukiBridge/compare/v0.0.12...v0.0.13
