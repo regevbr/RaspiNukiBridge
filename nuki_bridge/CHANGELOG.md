@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.0.19] - 2022-06-28
+
+### Fixed
+
+- fixed unhandled exception
+
 ## [0.0.18] - 2022-06-28
 
 ### Fixed
@@ -96,6 +102,7 @@
 
 - alpha version
 
+[0.0.19]: https://github.com/regevbr/RaspiNukiBridge/compare/v0.0.18...v0.0.19
 [0.0.18]: https://github.com/regevbr/RaspiNukiBridge/compare/v0.0.17...v0.0.18
 [0.0.17]: https://github.com/regevbr/RaspiNukiBridge/compare/v0.0.16...v0.0.17
 [0.0.16]: https://github.com/regevbr/RaspiNukiBridge/compare/v0.0.15...v0.0.16

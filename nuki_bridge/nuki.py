@@ -6,6 +6,7 @@ import struct
 import hmac
 import enum
 import time
+from asyncio import CancelledError, TimeoutError
 
 import crc16
 import nacl.utils
@@ -198,7 +199,7 @@ class NukiManager:
         logger.info("Stop scanning")
         try:
             await asyncio.wait_for(self._scanner.stop(), timeout=timeout)
-        except asyncio.TimeoutError as e:
+        except (TimeoutError, CancelledError) as e:
             logger.info(f'Timeout while stop scanning')
             logger.exception(e)
         except BleakDBusError as e:
@@ -264,7 +265,7 @@ class TaskQueue:
                         logger.info(f'Waiting for more tasks with timeout')
                         try:
                             task = await asyncio.wait_for(self._queue.get(), timeout=10)
-                        except TimeoutError:
+                        except (TimeoutError, CancelledError):
                             logger.info(f'No more tasks - cleaning up')
                             for device in self._manager.device_list:
                                 try:
@@ -696,10 +697,10 @@ class Nuki:
         logger.info("Connected")
 
     async def disconnect(self):
-        logger.info(f"Nuki disconnecting...")
         if self._client and self._client.is_connected:
+            logger.info(f"Nuki disconnecting...")
             await self._client.disconnect()
-        logger.info("Nuki disconnected")
+            logger.info("Nuki disconnected")
 
     async def update_state(self):
         logger.info("Querying Nuki state")
