@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.0.13] - 2022-06-28
+
+### Fixed
+
+- fixed bad yaml configuration
+
 ## [0.0.12] - 2022-06-28
 
 ### Added
@@ -60,6 +66,8 @@
 
 - alpha version
 
+[0.0.13]: https://github.com/regevbr/RaspiNukiBridge/compare/v0.0.12...v0.0.13
+[0.0.12]: https://github.com/regevbr/RaspiNukiBridge/compare/v0.0.11...v0.0.12
 [0.0.11]: https://github.com/regevbr/RaspiNukiBridge/compare/v0.0.10...v0.0.11
 [0.0.10]: https://github.com/regevbr/RaspiNukiBridge/compare/v0.0.9...v0.0.10
 [0.0.9]: https://github.com/regevbr/RaspiNukiBridge/compare/v0.0.8...v0.0.9

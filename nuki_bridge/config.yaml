@@ -1,7 +1,7 @@
 ---
 name: Nuki Bridge
 description: Virtual Nuki Bridge to use instead of the physical device
-version: 0.0.12
+version: 0.0.13
 slug: nuki_bridge
 url: https://github.com/regevbr/RaspiNukiBridge
 arch:
@@ -22,7 +22,7 @@ options:
   connection_timeout: 10
   retry: 5
 schema:
-  adapter: string
-  command_timeout: int
-  connection_timeout: int
+  adapter: str
+  command_timeout: float
+  connection_timeout: float
   retry: int
