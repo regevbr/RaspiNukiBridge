@@ -6,6 +6,7 @@ import struct
 import hmac
 import enum
 import time
+import queue
 
 import crc16
 import nacl.utils
@@ -234,6 +235,9 @@ class NukiManager:
             elif not nuki.config:
                 await nuki.get_config()
 
+class TaskQueue:
+    def __init__(self):
+        self._queue = queue.Queue()
 
 class Nuki:
 

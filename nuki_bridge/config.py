@@ -61,12 +61,13 @@ def init_config(config_file, addon_config_file):
     nuki_manager = NukiManager(name, app_id, bt_adapter)
 
     if 'smartlock' in data:
-        if global_retry:
-            data['smartlock']["retry"] = global_retry
-        if global_connection_timeout:
-            data['smartlock']["connection_timeout"] = global_connection_timeout
-        if global_command_timeout:
-            data['smartlock']["command_timeout"] = global_command_timeout
+        for smartlock in data['smartlock']:
+            if global_retry:
+                smartlock["retry"] = global_retry
+            if global_connection_timeout:
+                smartlock["connection_timeout"] = global_connection_timeout
+            if global_command_timeout:
+                smartlock["command_timeout"] = global_command_timeout
         logger.info(f"********************************************************************")
         logger.info(f"*                                                                  *")
         logger.info(f"*                            Access Token                          *")
