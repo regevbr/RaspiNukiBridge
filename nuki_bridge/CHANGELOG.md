@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.0.15] - 2022-06-28
+
+### Added
+
+- added a more safe way to handle connections
+
 ## [0.0.14] - 2022-06-28
 
 ### Fixed
@@ -72,6 +78,7 @@
 
 - alpha version
 
+[0.0.15]: https://github.com/regevbr/RaspiNukiBridge/compare/v0.0.14...v0.0.15
 [0.0.14]: https://github.com/regevbr/RaspiNukiBridge/compare/v0.0.13...v0.0.14
 [0.0.13]: https://github.com/regevbr/RaspiNukiBridge/compare/v0.0.12...v0.0.13
 [0.0.12]: https://github.com/regevbr/RaspiNukiBridge/compare/v0.0.11...v0.0.12

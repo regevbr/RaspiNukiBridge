@@ -73,7 +73,7 @@ class WebServer:
 
     async def _startup(self, _app):
         self._start_datetime = datetime.datetime.now()
-        await self.nuki_manager.start_scanning()
+        await self.nuki_manager.start()
 
     async def callback_add(self, request):
         if not self._check_token(request):

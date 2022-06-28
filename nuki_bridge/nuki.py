@@ -6,7 +6,6 @@ import struct
 import hmac
 import enum
 import time
-import queue
 
 import crc16
 import nacl.utils
@@ -140,6 +139,7 @@ class NukiManager:
         self._devices = {}
         self._scanner = BleakScanner(adapter=self._adapter)
         self._scanner.register_detection_callback(self._detected_ibeacon)
+        self.taskQueue = TaskQueue(self)
 
     @property
     def newstate_callback(self):
@@ -167,10 +167,14 @@ class NukiManager:
     def add_nuki(self, nuki: 'Nuki'):
         nuki.manager = self
         self._devices[nuki.address] = nuki
+        self.taskQueue.start()
 
     @property
     def device_list(self):
         return list(self._devices.values())
+
+    async def start(self):
+        self.taskQueue.start()
 
     async def start_scanning(self):
         ATTEMPTS = 8
@@ -222,22 +226,93 @@ class NukiManager:
             nuki.set_ble_device(device)
             nuki.rssi = device.rssi
             if not nuki.device_type:
-                try:
-                    await nuki.connect()  # this will force the identification of the device type
-                    await nuki.disconnect()
-                except Exception as e:
-                    logger.info('Error while detecting non-nuki')
-                    logger.exception(e)
-                    await self.start_scanning()
-                    return
+                async def conn():
+                    try:
+                        await nuki.connect()  # this will force the identification of the device type
+                    except Exception as e:
+                        logger.info('Error while detecting non-nuki')
+                        logger.exception(e)
+                await self.taskQueue.addTask(conn())
             if not nuki.last_state or tx_p & 0x1:
                 await nuki.update_state()
             elif not nuki.config:
                 await nuki.get_config()
 
 class TaskQueue:
-    def __init__(self):
-        self._queue = queue.Queue()
+    def __init__(self, manager):
+        self._manager = manager
+        self._queue = asyncio.Queue()
+        self._started = False
+        self._scanning = False
+
+    async def _worker(self):
+        initial_run = True
+        while True:
+            try:
+                if initial_run:
+                    initial_run = False
+                    try:
+                        await self._manager.start_scanning()
+                        self._scanning = True
+                    except:
+                        continue
+                    logger.info(f'Waiting for first task')
+                    task = await self._queue.get()
+                else:
+                    if self._queue.empty():
+                        logger.info(f'Waiting for more tasks with timeout')
+                        try:
+                            task = await asyncio.wait_for(self._queue.get(), timeout=10)
+                        except TimeoutError as e:
+                            logger.info(f'No more tasks - cleaning up')
+                            for device in self._manager.device_list:
+                                try:
+                                    await device.disconnect()
+                                except:
+                                    pass
+                            if not self._scanning:
+                                try:
+                                    await self._manager.start_scanning()
+                                    self._scanning = True
+                                except:
+                                    pass
+                            logger.info(f'Waiting for next task')
+                            task = await self._queue.get()
+                    else:
+                        logger.info(f'Waiting for next task')
+                        task = await self._queue.get()
+                if self._scanning:
+                    try:
+                        await self._manager.stop_scanning()
+                        self._scanning = False
+                    except:
+                        pass
+                logger.info(f'Working on task')
+                await task
+                logger.info(f'Finished task')
+                self._queue.task_done()
+            except Exception as e:
+                logger.error(f'Error while handling tasks')
+                logger.exception(e)
+                continue
+
+    def start(self):
+        if self._started:
+            return
+        self._started = True
+        asyncio.create_task(self._worker())
+
+    async def addTask(self, task):
+        loop = asyncio.get_running_loop()
+        fut = loop.create_future()
+        async def wrapper_task():
+            try:
+                result = await task
+                fut.set_result(result)
+            except Exception as e:
+                fut.set_exception(e)
+        await self.addTask(wrapper_task())
+        return await fut
 
 class Nuki:
 
@@ -490,7 +565,6 @@ class Nuki:
                 exit(0)
             else:
                 logger.error(f"Error {data}")
-            await self.disconnect()
 
         if command == NukiCommand.KEYTURNER_STATES:
             update_config = not self.config or (self.last_state["current_update_count"] != data["current_update_count"])
@@ -499,8 +573,6 @@ class Nuki:
             if self._challenge_command == NukiCommand.KEYTURNER_STATES:
                 if update_config:
                     await self.get_config()
-                else:
-                    await self.disconnect()
             if self.config and self.last_state:
                 await self.manager.nuki_newstate(self)
             if self.device_type == DeviceType.OPENER and self.last_state["last_lock_action_completion_status"]:
@@ -509,7 +581,6 @@ class Nuki:
         elif command == NukiCommand.CONFIG:
             self.config = data
             logger.info(f"Config: {self.config}")
-            await self.disconnect()
             if self.config and self.last_state:
                 await self.manager.nuki_newstate(self)
 
@@ -536,8 +607,6 @@ class Nuki:
                 if self._pairing_callback:
                     self._pairing_callback(self)
                     self._pairing_callback = None
-            if data["status"] == StatusCode.COMPLETED:
-                await self.disconnect()
 
         elif command == NukiCommand.CHALLENGE and self._challenge_command:
             logger.debug(f"Challenge for {self._challenge_command}")
@@ -573,25 +642,24 @@ class Nuki:
                 await self._send_data(self._BLE_PAIRING_CHAR, cmd)
 
     async def _send_data(self, characteristic, data):
-        # Sometimes the connection to the smartlock fails, retry 3 times
-        for i in range(1, self.retry + 1):
-            logger.info(f'Trying to send data. Attempt {i}')
-            try:
-                await self.connect()
-                if characteristic is None:
-                    characteristic = self._BLE_CHAR
-                logger.info(f'Sending data to {characteristic}: {data}')
-                await self._client.write_gatt_char(characteristic, data)
-                await self.disconnect()
-            except Exception as exc:
-                logger.info(f'Error while sending data on attempt {i}')
-                logger.exception(exc)
-                await asyncio.sleep(0.2)
-            else:
-                logger.info(f'Data sent on attempt {i}')
-                break
-        else:
-            await self.disconnect()
+        async def task():
+            # Sometimes the connection to the smartlock fails, retry 3 times
+            for i in range(1, self.retry + 1):
+                logger.info(f'Trying to send data. Attempt {i}')
+                try:
+                    await self.connect()
+                    if characteristic is None:
+                        characteristic = self._BLE_CHAR
+                    logger.info(f'Sending data to {characteristic}: {data}')
+                    await self._client.write_gatt_char(characteristic, data)
+                except Exception as exc:
+                    logger.info(f'Error while sending data on attempt {i}')
+                    logger.exception(exc)
+                    await asyncio.sleep(0.2)
+                else:
+                    logger.info(f'Data sent on attempt {i}')
+                    break
+        await self.manager.taskQueue.addTask(task())
 
     async def _safe_start_notify(self, *args):
         try:
@@ -608,7 +676,6 @@ class Nuki:
         if self._client.is_connected:
             logger.info("Connected")
             return
-        await self.manager.stop_scanning(timeout=self.command_timeout)
         logger.info("Nuki connecting")
         await self._client.connect()
         logger.debug(f"Services {[str(s) for s in self._client.services]}")
@@ -623,12 +690,11 @@ class Nuki:
         await self._safe_start_notify(self._BLE_CHAR, self._notification_handler)
         logger.info("Connected")
 
-    async def disconnect(self, and_scan=True):
-        logger.info(f"Nuki disconnecting... and_scan={and_scan}")
-        await self._client.disconnect()
+    async def disconnect(self):
+        logger.info(f"Nuki disconnecting...")
+        if self._client and self._client.is_connected:
+            await self._client.disconnect()
         logger.info("Nuki disconnected")
-        if and_scan:
-            await self.manager.start_scanning()
 
     async def update_state(self):
         logger.info("Querying Nuki state")
@@ -679,5 +745,4 @@ class Nuki:
         self._challenge_command = NukiCommand.PUBLIC_KEY
         payload = NukiCommand.PUBLIC_KEY.value.to_bytes(2, "little")
         cmd = self._prepare_command(NukiCommand.REQUEST_DATA.value, payload)
-        await self.connect()
         await self._send_data(self._BLE_PAIRING_CHAR, cmd)
