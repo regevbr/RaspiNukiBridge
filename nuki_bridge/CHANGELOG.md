@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.0.12] - 2022-06-28
+
+### Added
+
+- added ability to configure parameters from addon
+
 ## [0.0.11] - 2022-06-27
 
 ### Fixed

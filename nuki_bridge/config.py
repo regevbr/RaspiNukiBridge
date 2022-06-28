@@ -2,10 +2,11 @@ import asyncio
 import os
 import random
 
+import json
 import yaml
 from nacl.public import PrivateKey
 
-from consts import CONF_FILE_NAME, DATA_PATH
+from consts import CONF_FILE_NAME, ADDON_CONF_FILE_NAME, DATA_PATH
 from nuki import NukiManager, Nuki
 from scan_ble import find_ble_device
 from utils import logger
@@ -16,8 +17,13 @@ def get_config_file():
         return os.path.join(DATA_PATH, CONF_FILE_NAME)
     return CONF_FILE_NAME
 
+def get_addon_config_file():
+    if os.path.isdir(DATA_PATH):
+        return os.path.join(DATA_PATH, ADDON_CONF_FILE_NAME)
+    return ADDON_CONF_FILE_NAME
 
-def init_config(config_file):
+
+def init_config(config_file, addon_config_file):
     if os.path.isfile(config_file):
         with open(config_file) as f:
             data = yaml.load(f, Loader=yaml.FullLoader)
@@ -33,12 +39,34 @@ def init_config(config_file):
                 'token': token
             }
         }
+    if os.path.isfile(addon_config_file):
+        with open(addon_config_file) as f:
+            addon_data = json.load(f)
+    else:
+        addon_data = {}
+    global global_retry
+    global global_connection_timeout
+    global global_command_timeout
+    if "adapter" in addon_data:
+        data["server"]["adapter"] = addon_data["adapter"]
+    if "retry" in addon_data:
+        global_retry = addon_data["retry"]
+    if "connection_timeout" in addon_data:
+        global_connection_timeout = addon_data["connection_timeout"]
+    if "command_timeout" in addon_data:
+       global_command_timeout = addon_data["command_timeout"]
     name = data["server"]["name"]
     app_id = data["server"]["app_id"]
     bt_adapter = data["server"].get("adapter", "hci0")
     nuki_manager = NukiManager(name, app_id, bt_adapter)
 
     if 'smartlock' in data:
+        if global_retry:
+            data['smartlock']["retry"] = global_retry
+        if global_connection_timeout:
+            data['smartlock']["connection_timeout"] = global_connection_timeout
+        if global_command_timeout:
+            data['smartlock']["command_timeout"] = global_command_timeout
         logger.info(f"********************************************************************")
         logger.info(f"*                                                                  *")
         logger.info(f"*                            Access Token                          *")
@@ -56,6 +84,12 @@ def init_config(config_file):
         'command_timeout': 30,
         'retry': 5
     }
+    if global_retry:
+        smartlock["retry"] = global_retry
+    if global_connection_timeout:
+        smartlock["connection_timeout"] = global_connection_timeout
+    if global_command_timeout:
+        smartlock["command_timeout"] = global_command_timeout
 
     # Device MAC Address
     nuki_devices = find_ble_device('Nuki_.*', logger)

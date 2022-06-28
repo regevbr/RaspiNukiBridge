@@ -2,7 +2,7 @@ import asyncio
 import logging
 import argparse
 
-from config import init_config, _random_app_id_and_token, _generate_bridge_keys, get_config_file
+from config import init_config, _random_app_id_and_token, _generate_bridge_keys, get_config_file, get_addon_config_file
 from nuki import Nuki
 from scan_ble import find_ble_device
 from utils import logger, handler
@@ -62,7 +62,8 @@ if __name__ == "__main__":
         exit(0)
 
     config_file = args.config or get_config_file()
-    nuki_manager, data = init_config(config_file)
+    addon_config_file = get_addon_config_file()
+    nuki_manager, data = init_config(config_file, addon_config_file)
 
     if args.pair:
         if args.pair:
