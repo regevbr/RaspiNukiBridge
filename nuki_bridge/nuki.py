@@ -232,11 +232,12 @@ class NukiManager:
                     except Exception as e:
                         logger.info('Error while detecting non-nuki')
                         logger.exception(e)
-                await self.taskQueue.addTask(conn())
+                await self.taskQueue.add_task(conn())
             if not nuki.last_state or tx_p & 0x1:
                 await nuki.update_state()
             elif not nuki.config:
                 await nuki.get_config()
+
 
 class TaskQueue:
     def __init__(self, manager):
@@ -263,7 +264,7 @@ class TaskQueue:
                         logger.info(f'Waiting for more tasks with timeout')
                         try:
                             task = await asyncio.wait_for(self._queue.get(), timeout=10)
-                        except TimeoutError as e:
+                        except TimeoutError:
                             logger.info(f'No more tasks - cleaning up')
                             for device in self._manager.device_list:
                                 try:
@@ -303,9 +304,10 @@ class TaskQueue:
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self._worker())
 
-    async def addTask(self, task):
+    async def add_task(self, task):
         loop = asyncio.get_running_loop()
         fut = loop.create_future()
+
         async def wrapper_task():
             try:
                 result = await task
@@ -314,6 +316,7 @@ class TaskQueue:
                 fut.set_exception(e)
         await self._queue.put(wrapper_task())
         return await fut
+
 
 class Nuki:
 
@@ -645,14 +648,15 @@ class Nuki:
     async def _send_data(self, characteristic, data):
         async def task():
             # Sometimes the connection to the smartlock fails, retry 3 times
+            _characteristic = characteristic
             for i in range(1, self.retry + 1):
                 logger.info(f'Trying to send data. Attempt {i}')
                 try:
                     await self.connect()
-                    if characteristic is None:
-                        characteristic = self._BLE_CHAR
-                    logger.info(f'Sending data to {characteristic}: {data}')
-                    await self._client.write_gatt_char(characteristic, data)
+                    if _characteristic is None:
+                        _characteristic = self._BLE_CHAR
+                    logger.info(f'Sending data to {_characteristic}: {data}')
+                    await self._client.write_gatt_char(_characteristic, data)
                 except Exception as exc:
                     logger.info(f'Error while sending data on attempt {i}')
                     logger.exception(exc)
@@ -660,7 +664,7 @@ class Nuki:
                 else:
                     logger.info(f'Data sent on attempt {i}')
                     break
-        await self.manager.taskQueue.addTask(task())
+        await self.manager.taskQueue.add_task(task())
 
     async def _safe_start_notify(self, *args):
         try:
