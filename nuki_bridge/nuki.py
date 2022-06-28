@@ -198,6 +198,7 @@ class NukiManager:
         logger.info("Stop scanning")
         try:
             await asyncio.wait_for(self._scanner.stop(), timeout=timeout)
+            logger.info("Scanning stopped")
         except (TimeoutError, CancelledError) as e:
             logger.info(f'Timeout while stop scanning')
             logger.exception(e)
