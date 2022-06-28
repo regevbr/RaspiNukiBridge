@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.0.17] - 2022-06-28
+
+### Fixed
+
+- fixed infinite recursion
+
 ## [0.0.16] - 2022-06-28
 
 ### Fixed
@@ -84,6 +90,7 @@
 
 - alpha version
 
+[0.0.17]: https://github.com/regevbr/RaspiNukiBridge/compare/v0.0.16...v0.0.17
 [0.0.16]: https://github.com/regevbr/RaspiNukiBridge/compare/v0.0.15...v0.0.16
 [0.0.15]: https://github.com/regevbr/RaspiNukiBridge/compare/v0.0.14...v0.0.15
 [0.0.14]: https://github.com/regevbr/RaspiNukiBridge/compare/v0.0.13...v0.0.14

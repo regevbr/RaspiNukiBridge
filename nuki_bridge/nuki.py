@@ -312,7 +312,7 @@ class TaskQueue:
                 fut.set_result(result)
             except Exception as e:
                 fut.set_exception(e)
-        await self.addTask(wrapper_task())
+        await self._queue.put(wrapper_task())
         return await fut
 
 class Nuki:
