@@ -168,7 +168,6 @@ class NukiManager:
     def add_nuki(self, nuki: 'Nuki'):
         nuki.manager = self
         self._devices[nuki.address] = nuki
-        self.taskQueue.start()
 
     @property
     def device_list(self):
@@ -233,7 +232,7 @@ class NukiManager:
                     except Exception as e:
                         logger.info('Error while detecting non-nuki')
                         logger.exception(e)
-                await self.taskQueue.add_task(conn())
+                await self.taskQueue.add_task(conn)
             if not nuki.last_state or tx_p & 0x1:
                 await nuki.update_state()
             elif not nuki.config:
@@ -243,8 +242,7 @@ class NukiManager:
 class TaskQueue:
     def __init__(self, manager):
         self._manager = manager
-        self._queue = asyncio.Queue()
-        self._started = False
+        self._queue = None
         self._scanning = False
 
     async def _worker(self):
@@ -290,7 +288,7 @@ class TaskQueue:
                     except:
                         pass
                 logger.info(f'Working on task')
-                await task
+                await task()
                 logger.info(f'Finished task')
                 self._queue.task_done()
             except Exception as e:
@@ -299,11 +297,11 @@ class TaskQueue:
                 continue
 
     def start(self):
-        if self._started:
+        if self._queue:
             return
-        self._started = True
+        self._queue = asyncio.Queue()
         loop = asyncio.get_event_loop()
-        loop.run_until_complete(self._worker())
+        loop.create_task(self._worker())
 
     async def add_task(self, task):
         loop = asyncio.get_running_loop()
@@ -311,11 +309,11 @@ class TaskQueue:
 
         async def wrapper_task():
             try:
-                result = await task
+                result = await task()
                 fut.set_result(result)
             except Exception as e:
                 fut.set_exception(e)
-        await self._queue.put(wrapper_task())
+        await self._queue.put(wrapper_task)
         return await fut
 
 
@@ -665,7 +663,7 @@ class Nuki:
                 else:
                     logger.info(f'Data sent on attempt {i}')
                     break
-        await self.manager.taskQueue.add_task(task())
+        await self.manager.taskQueue.add_task(task)
 
     async def _safe_start_notify(self, *args):
         try:
