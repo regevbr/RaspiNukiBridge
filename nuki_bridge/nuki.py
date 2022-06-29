@@ -177,10 +177,9 @@ class NukiManager:
         self.taskQueue.start()
 
     async def start_scanning(self):
+        ATTEMPTS = 8
         logger.info(f"Starting a scan")
-        i = 0
-        while True:
-            i += 1
+        for i in range(1, ATTEMPTS + 1):
             try:
                 logger.info(f"Scanning attempt {i}")
                 await self._scanner.start()
@@ -189,7 +188,9 @@ class NukiManager:
             except BleakDBusError as e:
                 logger.error(f'Error while start scanning attempt {i}')
                 logger.exception(e)
-                sleep_seconds = 2 ** i
+                if i >= ATTEMPTS - 1:
+                    raise e
+                sleep_seconds = 2
                 logger.info(f"Scanning failed on attempt {i}. Retrying in {sleep_seconds} seconds")
                 time.sleep(sleep_seconds)
 
@@ -246,32 +247,27 @@ class TaskQueue:
         self._scanning = False
 
     async def _worker(self):
-        initial_run = True
         while True:
             try:
-                if initial_run:
-                    initial_run = False
-                    await self._manager.start_scanning()
-                    self._scanning = True
-                    logger.info(f'Waiting for first task')
-                    task = await self._queue.get()
-                else:
-                    if self._queue.empty():
-                        logger.info(f'Waiting for more tasks with timeout')
-                        try:
-                            task = await asyncio.wait_for(self._queue.get(), timeout=10)
-                        except (TimeoutError, CancelledError):
-                            logger.info(f'No more tasks - cleaning up')
-                            for device in self._manager.device_list:
-                                await device.disconnect()
-                            if not self._scanning:
+                if self._queue.empty():
+                    logger.info(f'Waiting for more tasks with timeout')
+                    try:
+                        task = await asyncio.wait_for(self._queue.get(), timeout=10)
+                    except (TimeoutError, CancelledError):
+                        logger.info(f'No more tasks - cleaning up')
+                        for device in self._manager.device_list:
+                            await device.disconnect()
+                        if not self._scanning:
+                            try:
                                 await self._manager.start_scanning()
                                 self._scanning = True
-                            logger.info(f'Waiting for next task')
-                            task = await self._queue.get()
-                    else:
+                            except:
+                                continue
                         logger.info(f'Waiting for next task')
                         task = await self._queue.get()
+                else:
+                    logger.info(f'Waiting for next task')
+                    task = await self._queue.get()
                 if self._scanning:
                     await self._manager.stop_scanning()
                     self._scanning = False

@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.0.22] - 2022-06-29
+
+### Fixed
+
+- fix stuck on infinite loop when device is not ready
+
 ## [0.0.21] - 2022-06-28
 
 ### Fixed
