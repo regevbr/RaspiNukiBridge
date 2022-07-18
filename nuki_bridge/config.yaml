@@ -1,7 +1,7 @@
 ---
 name: Nuki Bridge
 description: Virtual Nuki Bridge to use instead of the physical device
-version: 0.0.22
+version: 0.0.23-alpha.1
 slug: nuki_bridge
 url: https://github.com/regevbr/RaspiNukiBridge
 arch:

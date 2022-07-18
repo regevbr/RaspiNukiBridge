@@ -12,7 +12,7 @@ Use this instead of the [Nuki Bridge](https://nuki.io/en/bridge/) device.
 - Similar project [here](https://github.com/ftarolli/NukiBridgeAddon)
 - Nuki documentation
   - [Nuki Smart Lock API V2.2.1](https://developer.nuki.io/page/nuki-smart-lock-api-2/2/#heading--lock-action)
-  - [Nuki Bridge HTTP API V1.13.1](https://developer.nuki.io/page/nuki-bridge-http-api-1-13/4/#heading--lockstate)
+  - [Nuki Bridge HTTP API V1.13.2](https://developer.nuki.io/page/nuki-bridge-http-api-1-13/4/#heading--lockstate)
 
 # Installation
 

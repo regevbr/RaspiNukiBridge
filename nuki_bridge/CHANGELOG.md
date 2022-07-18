@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.0.23-alpha.1] - 2022-07-18
+
+### Fixed
+
+- try to fix pairing not working
+
 ## [0.0.22] - 2022-06-29
 
 ### Fixed
@@ -120,6 +126,8 @@
 
 - alpha version
 
+[0.0.23-alpha.1]: https://github.com/regevbr/RaspiNukiBridge/compare/v0.0.22...v0.0.23-alpha.1
+[0.0.22]: https://github.com/regevbr/RaspiNukiBridge/compare/v0.0.21...v0.0.22
 [0.0.21]: https://github.com/regevbr/RaspiNukiBridge/compare/v0.0.20...v0.0.21
 [0.0.20]: https://github.com/regevbr/RaspiNukiBridge/compare/v0.0.19...v0.0.20
 [0.0.19]: https://github.com/regevbr/RaspiNukiBridge/compare/v0.0.18...v0.0.19

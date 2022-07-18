@@ -110,6 +110,8 @@ def init_config(config_file, addon_config_file):
 
     loop = asyncio.new_event_loop()
 
+    nuki_manager.start(loop)
+
     def pairing_completed(paired_nuki):
         nuki_public_key = paired_nuki.nuki_public_key.hex()
         auth_id = paired_nuki.auth_id.hex()

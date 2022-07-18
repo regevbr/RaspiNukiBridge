@@ -173,8 +173,8 @@ class NukiManager:
     def device_list(self):
         return list(self._devices.values())
 
-    def start(self):
-        self.taskQueue.start()
+    def start(self, loop):
+        self.taskQueue.start(loop)
 
     async def start_scanning(self):
         ATTEMPTS = 8
@@ -280,12 +280,14 @@ class TaskQueue:
                 logger.exception(e)
                 continue
 
-    def start(self):
+    def start(self, loop):
         if self._queue:
             return
         self._queue = asyncio.Queue()
-        loop = asyncio.get_event_loop()
-        loop.create_task(self._worker())
+        if loop:
+            loop.create_task(self._worker())
+        else:
+            asyncio.get_event_loop().create_task(self._worker())
 
     async def add_task(self, task):
         loop = asyncio.get_running_loop()
