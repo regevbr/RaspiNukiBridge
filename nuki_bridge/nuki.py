@@ -746,4 +746,5 @@ class Nuki:
         self._challenge_command = NukiCommand.PUBLIC_KEY
         payload = NukiCommand.PUBLIC_KEY.value.to_bytes(2, "little")
         cmd = self._prepare_command(NukiCommand.REQUEST_DATA.value, payload)
+        await self.connect()
         await self._send_data(self._BLE_PAIRING_CHAR, cmd)
