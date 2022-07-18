@@ -109,7 +109,11 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: ⤵️ Download base image
-        run: docker pull "${{ steps.flags.outputs.from }}"
+        run: |
+          docker pull "${{ steps.flags.outputs.from }}"
+          docker pull ghcr.io/regevbr/${{ needs.information.outputs.slug }}/${{ matrix.architecture }}:edge || echo failed
+          docker pull ghcr.io/regevbr/${{ needs.information.outputs.slug }}/${{ matrix.architecture }}:beta || echo failed
+          docker pull ghcr.io/regevbr/${{ needs.information.outputs.slug }}/${{ matrix.architecture }}:stable || echo failed
       - name: 🚀 Build
         uses: docker/build-push-action@v2.9.0
         with:
@@ -124,6 +128,7 @@ jobs:
           cache-from: |
             type=local,src=/tmp/.docker-cache
             ghcr.io/regevbr/${{ needs.information.outputs.slug }}/${{ matrix.architecture }}:edge
+            ghcr.io/regevbr/${{ needs.information.outputs.slug }}/${{ matrix.architecture }}:beta
             ghcr.io/regevbr/${{ needs.information.outputs.slug }}/${{ matrix.architecture }}:stable
           cache-to: type=local,mode=max,dest=/tmp/.docker-cache-new
           platforms: ${{ steps.flags.outputs.platform }}
