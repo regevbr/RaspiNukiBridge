@@ -245,6 +245,7 @@ class TaskQueue:
         self._manager = manager
         self._queue = None
         self._scanning = False
+        self._loop = None
 
     async def _worker(self):
         while True:
@@ -252,7 +253,7 @@ class TaskQueue:
                 if self._queue.empty():
                     logger.info(f'Waiting for more tasks with timeout')
                     try:
-                        task = await asyncio.wait_for(self._queue.get(), timeout=10)
+                        task = await asyncio.wait_for(self._queue.get(), timeout=10, loop=self._loop)
                     except (TimeoutError, CancelledError):
                         logger.info(f'No more tasks - cleaning up')
                         for device in self._manager.device_list:
@@ -284,13 +285,14 @@ class TaskQueue:
         if self._queue:
             return
         self._queue = asyncio.Queue()
+        self._loop = loop
         if loop:
             loop.create_task(self._worker())
         else:
             asyncio.get_event_loop().create_task(self._worker())
 
     async def add_task(self, task):
-        loop = asyncio.get_running_loop()
+        loop = self._loop or asyncio.get_running_loop()
         fut = loop.create_future()
 
         async def wrapper_task():
