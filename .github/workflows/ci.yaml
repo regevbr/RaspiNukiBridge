@@ -176,6 +176,7 @@ jobs:
           cache-from: |
             type=local,src=/tmp/.docker-cache
             ghcr.io/regevbr/${{ needs.information.outputs.slug }}/${{ matrix.architecture }}:edge
+            ghcr.io/regevbr/${{ needs.information.outputs.slug }}/${{ matrix.architecture }}:stable
           cache-to: type=local,mode=max,dest=/tmp/.docker-cache-new
           platforms: ${{ steps.flags.outputs.platform }}
           build-args: |
