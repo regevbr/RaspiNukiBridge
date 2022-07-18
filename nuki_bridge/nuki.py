@@ -284,15 +284,17 @@ class TaskQueue:
     def start(self, loop=None):
         if self._queue:
             return
-        self._queue = asyncio.Queue()
         self._loop = loop
-        if loop:
-            loop.create_task(self._worker())
-        else:
+        self._queue = asyncio.Queue(loop=self._loop)
+        if loop is None:
             asyncio.get_event_loop().create_task(self._worker())
+        else:
+            loop.create_task(self._worker())
 
     async def add_task(self, task):
-        loop = self._loop or asyncio.get_running_loop()
+        loop = self._loop
+        if loop is None:
+            loop = asyncio.get_running_loop()
         fut = loop.create_future()
 
         async def wrapper_task():
