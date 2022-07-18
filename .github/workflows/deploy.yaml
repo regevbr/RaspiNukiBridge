@@ -108,7 +108,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: ⤵️ Download base image
+      - name: ⤵️ Download base images
         run: |
           docker pull "${{ steps.flags.outputs.from }}"
           docker pull ghcr.io/regevbr/${{ needs.information.outputs.slug }}/${{ matrix.architecture }}:edge || echo failed

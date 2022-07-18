@@ -165,7 +165,7 @@ jobs:
             echo "::error ::Could not determine platform for architecture ${{ matrix.architecture }}"
             exit 1
           fi
-      - name: ⤵️ Download base image
+      - name: ⤵️ Download base images
         run: |
           docker pull "${{ steps.flags.outputs.from }}"
           docker pull ghcr.io/regevbr/${{ needs.information.outputs.slug }}/${{ matrix.architecture }}:edge || echo failed
