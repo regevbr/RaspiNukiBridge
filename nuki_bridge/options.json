@@ -1,5 +1,0 @@
-{
-        "retry": 5,
-        "connection_timeout": 30,
-        "command_timeout": 30
-}
