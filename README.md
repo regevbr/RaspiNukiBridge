@@ -8,7 +8,7 @@ Use this instead of the [Nuki Bridge](https://nuki.io/en/bridge/) device.
 ## Background
 
 - This is heavily inspired by the work of [Jandebeule](https://github.com/jandebeule/nukiPyBridge).
-- Forked from [dauden1184](https://github.com/dauden1184/) 's [RaspiNukiBridge](https://github.com/dauden1184/RaspiNukiBridge)
+- Forked from [dauden1184](https://github.com/regevbr/) 's [RaspiNukiBridge](https://github.com/regevbr/RaspiNukiBridge)
 - Similar project [here](https://github.com/ftarolli/NukiBridgeAddon)
 - Nuki documentation
   - [Nuki Smart Lock API V2.2.1](https://developer.nuki.io/page/nuki-smart-lock-api-2/2/#heading--lock-action)
