@@ -1,3 +1,7 @@
+# UNMAINTAINED
+
+This project is no longer maintained. Please use the highly reliable https://github.com/technyon/nuki_hub project
+
 # Home Assistant Virtual Nuki Bridge
 
 Use this instead of the [Nuki Bridge](https://nuki.io/en/bridge/) device.
