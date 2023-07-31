@@ -1,6 +1,7 @@
 # UNMAINTAINED
 
-This project is no longer maintained. Please use the highly reliable https://github.com/technyon/nuki_hub project
+This project is no longer maintained. Please use the highly reliable https://github.com/technyon/nuki_hub project to run a hub on an esp board.
+You can also consider using the new HA HACS integration https://github.com/ronengr/hass_nuki_bt
 
 # Home Assistant Virtual Nuki Bridge
 
